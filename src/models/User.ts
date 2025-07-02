@@ -6,6 +6,7 @@ export interface IUser extends Document {
   passwordHash: string;
   turnosCreados: mongoose.Types.ObjectId[];
   turnosUnidos: mongoose.Types.ObjectId[];
+  canchasAgendadas: mongoose.Types.ObjectId[];
 }
 
 const UserSchema = new Schema<IUser>({
@@ -14,6 +15,7 @@ const UserSchema = new Schema<IUser>({
   passwordHash: { type: String, required: true },
   turnosCreados: [{ type: Schema.Types.ObjectId, ref: 'Turno' }],
   turnosUnidos: [{ type: Schema.Types.ObjectId, ref: 'Turno' }],
+  canchasAgendadas: [{ type: Schema.Types.ObjectId, ref: 'Cancha' }],
 });
 
 export default mongoose.model<IUser>('User', UserSchema);
