@@ -2,7 +2,6 @@ import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Turno from '../models/Turno';
-import User from '../models/User';
 
 const router = express.Router();
 
@@ -54,16 +53,19 @@ router.post('/:token/confirmar', async (req, res) => {
     if (!turno) {
       return res.status(404).json({ message: 'Turno no encontrado' });
     }
-console.log(turno);
 
-///// NO FUNCIONA ////////////////////////////////
-    //Revisar que sea un usuario nuevo
+    if (!nombre || !email) {
+      return res.status(400).json({ message: 'Faltan nombre o email del invitado' });
+    }
 
-    const yaExiste = turno.invitados.some(
-      (i) =>
-        i.nombre.toLowerCase() === nombre.toLowerCase() ||
-        i.email.toLowerCase() === email.toLowerCase()
-    );
+    const yaExiste = turno.invitados.some((i) => {
+      const nombreInv = i.nombre?.toLowerCase();
+      const emailInv = i.email?.toLowerCase();
+      return (
+        (nombreInv && nombreInv === nombre?.toLowerCase()) ||
+        (emailInv && emailInv === email?.toLowerCase())
+      );
+    });
 
     const yaRegistrado = (email: string) => {
       return turno.participantes.some(
@@ -73,7 +75,7 @@ console.log(turno);
     
 
     if (yaExiste || yaRegistrado(email)) {
-      return res.status(400).json({ message: 'Ya existe un participante o invitado con ese nombre o email' });
+      return res.status(400).json({ message: '❌ Ya existe un invitado con ese nombre o email' });
     }
 
     // Revisar si está logueado
