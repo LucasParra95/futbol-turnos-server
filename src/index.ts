@@ -13,10 +13,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || '';
+const CLIENT_URL = process.env.CLIENT_URL || '';
 
 // Middlewares
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: `${CLIENT_URL}`,
   credentials: true
 }));
 app.use(express.json());
