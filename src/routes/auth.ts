@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
 const router = express.Router();
+const REFRESH_SECRET = process.env.REFRESH_SECRET || "";
+const ACCESS_SECRET = process.env.ACCESS_SECRET || "";
 
 // POST /api/auth/register
 router.post(
@@ -68,18 +70,34 @@ router.post(
       const passwordOk = await bcrypt.compare(password, user.passwordHash);
       if (!passwordOk) return res.status(401).json({ message: 'Credenciales inválidas' });
 
-      // Generar token
-      const token = jwt.sign(
-        {
-          id: user._id,
-          email: user.email,
-        },
-        process.env.JWT_SECRET || 'secretkey123', // ¡Reemplazalo en producción!
-        { expiresIn: '2h' }
-      );
+      const generateTokens = (userId: string) => {
+        const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'secretkey123', {
+          expiresIn: '15m',
+        });
 
-      res.json({
-        token,
+        const refreshToken = jwt.sign(
+          { id: userId },
+          process.env.JWT_REFRESH_SECRET || 'refreshSecret123',
+          {
+            expiresIn: '7d',
+          }
+        );
+
+        return { accessToken, refreshToken };
+      };
+
+      const { accessToken, refreshToken } = generateTokens(user._id.toString());
+
+      // Enviar refresh token en cookie segura
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.status(201).json({
+        accessToken,
         user: {
           id: user._id,
           nombre: user.nombre,
@@ -92,5 +110,22 @@ router.post(
     }
   }
 );
+
+router.post('/refresh-token', (req, res) => {
+  const token = req.cookies?.refreshToken;
+  console.log("/refresh-token", token);
+  
+  if (!token) return res.status(401).json({ message: 'No refresh token' });
+
+  jwt.verify(token, REFRESH_SECRET, (err: any, decoded: any) => {
+    if (err) return res.status(403).json({ message: 'Invalid refresh token' });
+
+    const newToken = jwt.sign({ id: decoded.id }, ACCESS_SECRET, {
+      expiresIn: '15m',
+    });
+
+    return res.json({ token: newToken });
+  });
+});
 
 export default router;
